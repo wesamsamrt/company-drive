@@ -1,1 +1,0 @@
-import{redirect}from"next/navigation";import{currentUser}from"@/lib/auth";import{DashboardClient}from"@/components/DashboardClient";export default async function Page(){if(!await currentUser())redirect("/login");return <DashboardClient/>}

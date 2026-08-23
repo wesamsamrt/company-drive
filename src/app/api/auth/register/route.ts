@@ -1,5 +1,0 @@
-import { NextRequest, NextResponse } from "next/server";
-import bcrypt from "bcryptjs"; import { z } from "zod";
-import { prisma } from "@/lib/prisma"; import { createToken, sessionCookie } from "@/lib/auth";
-const schema = z.object({ name:z.string().min(2).max(80), email:z.string().email(), password:z.string().min(8).max(128) });
-export async function POST(request: NextRequest) { try { const data=schema.parse(await request.json()); const exists=await prisma.user.findUnique({where:{email:data.email.toLowerCase()}}); if(exists) return NextResponse.json({error:"البريد الإلكتروني مستخدم بالفعل"},{status:409}); const user=await prisma.user.create({data:{name:data.name,email:data.email.toLowerCase(),passwordHash:await bcrypt.hash(data.password,12)}}); const response=NextResponse.json({user:{id:user.id,name:user.name,email:user.email}},{status:201}); response.cookies.set(sessionCookie(await createToken(user))); return response; } catch { return NextResponse.json({error:"البيانات غير صالحة"},{status:400}); } }

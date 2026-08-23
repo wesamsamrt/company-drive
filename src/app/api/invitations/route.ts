@@ -1,2 +1,0 @@
-import{NextRequest,NextResponse}from"next/server";import{requestUser}from"@/lib/auth";import{prisma}from"@/lib/prisma";
-export async function GET(r:NextRequest){const u=await requestUser(r);if(!u)return NextResponse.json({error:"غير مصرح"},{status:401});return NextResponse.json(await prisma.invitation.findMany({where:{recipientId:u.id,status:"PENDING"},include:{workspace:true,sender:{select:{name:true}}},orderBy:{createdAt:"desc"}}));}
