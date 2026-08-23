@@ -1,0 +1,3 @@
+import { NextRequest, NextResponse } from "next/server"; import bcrypt from "bcryptjs";
+import { prisma } from "@/lib/prisma"; import { createToken, sessionCookie } from "@/lib/auth";
+export async function POST(request: NextRequest) { const {email,password}=await request.json(); const user=await prisma.user.findUnique({where:{email:String(email).toLowerCase()}}); if(!user || !await bcrypt.compare(String(password),user.passwordHash)) return NextResponse.json({error:"البريد الإلكتروني أو كلمة المرور غير صحيحة"},{status:401}); await prisma.user.update({where:{id:user.id},data:{lastSeenAt:new Date()}}); const response=NextResponse.json({user:{id:user.id,name:user.name,email:user.email}}); response.cookies.set(sessionCookie(await createToken(user))); return response; }

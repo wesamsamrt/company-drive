@@ -1,0 +1,1 @@
+import{redirect}from"next/navigation";import{currentUser}from"@/lib/auth";import{EmployeesClient}from"@/components/EmployeesClient";export default async function Page(){const u=await currentUser();if(!u)redirect("/login");return <EmployeesClient name={u.name}/>}

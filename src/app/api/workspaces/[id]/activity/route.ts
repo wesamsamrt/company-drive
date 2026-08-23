@@ -1,0 +1,2 @@
+import{NextRequest,NextResponse}from"next/server";import{prisma}from"@/lib/prisma";import{authorize}from"@/lib/access";
+export async function GET(r:NextRequest,{params}:{params:Promise<{id:string}>}){const{id}=await params;const a=await authorize(r,id,"view");if("error"in a)return NextResponse.json(a,{status:a.status});return NextResponse.json(await prisma.activityLog.findMany({where:{workspaceId:id},include:{actor:{select:{name:true,avatarUrl:true}}},orderBy:{createdAt:"desc"},take:100}));}
