@@ -18,7 +18,33 @@ let timer;function search(x){clearTimeout(timer);timer=setTimeout(()=>{S.query=x
 function newFolder(){modal('مجلد جديد',`<form onsubmit="saveFolder(event)"><input id="folderName" class="field" required maxlength="160" placeholder="اسم المجلد"><footer><button class="btn primary">إنشاء</button></footer></form>`)}async function saveFolder(e){e.preventDefault();await run(async()=>{await rpc('create_folder',{workspace_id:S.ws.id,parent_folder_id:S.folder,folder_name:folderName.value});closeModal();renderFiles()})}
 async function upload(file){if(!file)return;if(file.size>25*1024*1024)return toast('الحد الأعلى 25MB',true);const path=`${S.ws.id}/${crypto.randomUUID()}`;await run(async()=>{await get(db.storage.from('workspace-files').upload(path,file,{contentType:file.type||'application/octet-stream'}));try{await rpc('create_file_record',{workspace_id:S.ws.id,parent_folder_id:S.folder,file_name:file.name,file_type:file.type||'application/octet-stream',file_size:file.size,file_path:path})}catch(e){await db.storage.from('workspace-files').remove([path]);throw e}toast('تم رفع الملف');renderFiles()})}
 async function fileDetail(id){await run(async()=>{const f=await rpc('file_detail',{file_id:id});modal(f.name,`<div class="preview">${icon(f.mime_type)}<h3>${esc(f.name)}</h3><p>${size(f.size_bytes)} · ${esc(f.uploader_name)}</p><button class="btn primary" onclick="download('${f.storage_path}','${esc(f.name)}')">↓ تنزيل</button></div>`)})}async function download(path,name){await run(async()=>{const b=await get(db.storage.from('workspace-files').download(path));const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500)})}
-function menu(kind,id,name){modal(name,`<div class="menu"><button onclick="rename('${kind}','${id}','${name}')">✎ إعادة تسمية</button><button class="dangerText" onclick="removeItem('${kind}','${id}','${name}')">⌫ حذف</button></div>`)}async function rename(kind,id,name){closeModal();const n=prompt('الاسم الجديد',name);if(!n||n===name)return;await run(async()=>{await rpc('rename_workspace_item',{item_type:kind,item_id:id,new_name:n});renderFiles()})}async function removeItem(kind,id,name){closeModal();if(!confirm(`حذف ${name}؟`))return;await run(async()=>{await rpc('delete_workspace_item',{item_type:kind,item_id:id});toast('تم الحذف');renderFiles()})}
+function menu(kind,id,name){modal(name,`<div class="menu"><button onclick="rename('${kind}','${id}','${name}')">✎ إعادة تسمية</button><button class="dangerText" onclick="removeItem('${kind}','${id}','${name}')">⌫ حذف</button></div>`)}async function rename(kind,id,name){closeModal();const n=prompt('الاسم الجديد',name);if(!n||n===name)return;await run(async()=>{await rpc('rename_workspace_item',{item_type:kind,item_id:id,new_name:n});renderFiles()})}async function removeItem(kind,id,name){
+  closeModal();
+
+  if(!confirm(`حذف ${name}؟`)) return;
+
+  await run(async()=>{
+    if(kind === 'file'){
+      const file = await rpc('file_detail',{file_id:id});
+
+      if(file?.storage_path){
+        await get(
+          db.storage
+            .from('workspace-files')
+            .remove([file.storage_path])
+        );
+      }
+    }
+
+    await rpc('delete_workspace_item',{
+      item_type:kind,
+      item_id:id
+    });
+
+    toast('تم الحذف');
+    renderFiles();
+  });
+}
 async function members(){await run(async()=>{modal('أعضاء مساحة العمل',`<div class="memberList">${S.ws.members.map(m=>`<article><i>${esc(m.full_name[0])}</i><div><b>${esc(m.full_name)}</b><small>${esc(m.email)}</small></div><span>${m.role}</span></article>`).join('')}</div><button class="btn primary full" onclick="invite()">＋ دعوة موظف</button>`)})}async function invite(){const p=await rpc('available_profiles',{workspace_id:S.ws.id});modal('دعوة موظف',`<form onsubmit="sendInvite(event)"><select id="inviteUser" class="field">${p.map(x=>`<option value="${x.id}">${esc(x.full_name)} — ${esc(x.email)}</option>`).join('')}</select><select id="inviteRole" class="field"><option value="viewer">Viewer</option><option value="editor">Editor</option><option value="admin">Admin</option></select><button class="btn primary">إرسال الدعوة</button></form>`)}async function sendInvite(e){e.preventDefault();await run(async()=>{await rpc('send_invitation',{workspace_id:S.ws.id,recipient_id:inviteUser.value,member_role:inviteRole.value});closeModal();toast('تم إرسال الدعوة')})}
 async function invitations(){await run(async()=>{const x=await rpc('my_pending_invitations');shell(`<header class="pageHeader"><div><p class="eyebrow">الدعوات</p><h1>دعوات الانضمام</h1></div></header><section class="list">${x.map(i=>`<article><i>${esc(i.workspace_name[0])}</i><div><b>${esc(i.workspace_name)}</b><small>من ${esc(i.sender_name)} · ${i.role}</small></div><button class="btn primary" onclick="accept('${i.id}')">قبول</button><button class="btn secondary" onclick="decline('${i.id}')">رفض</button></article>`).join('')||empty('لا توجد دعوات','ستظهر الدعوات هنا.')}</section>`)})}async function accept(id){await run(async()=>{await rpc('accept_invitation',{invitation_id:id});dashboard()})}async function decline(id){await run(async()=>{await rpc('decline_invitation',{invitation_id:id});invitations()})}
 async function employees(){await run(async()=>{const p=await rpc('company_profiles');shell(`<header class="pageHeader"><div><p class="eyebrow">دليل الشركة</p><h1>الموظفون</h1></div></header><section class="employeeGrid">${p.map(x=>`<article><i>${esc(x.full_name[0])}</i><div><b>${esc(x.full_name)}</b><small>${esc(x.email)}</small></div></article>`).join('')}</section>`)})}async function activity(){await run(async()=>{const x=await rpc('workspace_activity',{workspace_id:S.ws.id});modal('سجل النشاط',`<div class="timeline">${x.map(a=>`<article><i>${esc(a.actor_name[0])}</i><p><b>${esc(a.actor_name)}</b> ${esc(a.action)} ${esc(a.entity_name)}<small>${date(a.created_at)}</small></p></article>`).join('')}</div>`)})}
