@@ -10,6 +10,10 @@
 4. انسخ `config.example.js` وسمّ النسخة `config.js`، ثم ضع Project URL وanon/public key من Settings > API.
 5. افتح `index.html` عبر GitHub Pages أو Netlify أو Vercel. لا تفتح `config.js` أو تستخدم service_role key.
 
+## الترقية إلى الإصدار 2
+
+نفّذ ملف `supabase/upgrade_v2.sql` كاملًا في SQL Editor، ثم استبدل `app.js` و`style.css` في مستودع GitHub بالنسخة الجديدة. تضيف الترقية لوحة تحكم محسّنة، ملخصات للمساحات والملفات، عرض شبكي/جدولي، معاينة وتنزيل الملفات، بحث، إنشاء/حذف/إعادة تسمية، إدارة دعوات، دليل موظفين وسجل نشاط.
+
 ## GitHub Pages
 
 ارفع كل الملفات إلى مستودع GitHub **باستثناء `config.js`**. ثم Settings > Pages > Deploy from branch > `main` > `/ (root)`.
